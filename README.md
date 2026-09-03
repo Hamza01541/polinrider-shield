@@ -9,7 +9,7 @@ A Windows and macOS security tool for the **PolinRider/Lazarus Group npm supply 
 
 ## What is PolinRider?
 
-PolinRider is a supply chain attack campaign attributed to the **DPRK Lazarus Group**. As of May-August 2026 it has compromised over 1,900 GitHub repositories across 1,047 unique owners.
+PolinRider is a supply chain attack campaign attributed to the **DPRK Lazarus Group / BlueNoroff**. As of August 2026 it has compromised over 2,000 GitHub repositories across multiple unique owners, with numbers growing rapidly since its first detection in early 2026.
 
 **How it works:**
 1. A malicious npm package or compromised fork is installed or cloned
