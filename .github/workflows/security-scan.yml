@@ -1,0 +1,193 @@
+name: Security Scan - PolinRider Detection
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+  push:
+    branches: [master, main, develop]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Scan for malicious code patterns
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --name-only origin/${{ github.base_ref }}...HEAD > /tmp/changed_files.txt
+          else
+            git diff --name-only HEAD~1 HEAD > /tmp/changed_files.txt
+          fi
+          echo "Changed files:"
+          cat /tmp/changed_files.txt
+
+      - name: Check for long single lines in config files
+        run: |
+          echo "Checking changed config files for long lines..."
+          THRESHOLD=500
+          FAILED=0
+
+          CONFIG_PATTERNS="jest.config.js|jest.config.ts|webpack.config.js|vite.config.js|vite.config.ts|postcss.config.js|tailwind.config.js|next.config.js|rollup.config.js|eslintrc.js|gulpfile.js|Gruntfile.js"
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            echo "$file" | grep -qE "$CONFIG_PATTERNS" || continue
+
+            while IFS= read -r line; do
+              len=${#line}
+              if [ "$len" -gt "$THRESHOLD" ]; then
+                echo "::error file=$file::Suspiciously long line detected ($len chars). Possible minified payload injection."
+                echo "  Preview: ${line:0:100}..."
+                FAILED=1
+              fi
+            done < "$file"
+          done < /tmp/changed_files.txt
+
+          [ "$FAILED" = "1" ] && exit 1 || echo "OK: No long lines found in changed config files."
+
+      - name: Check for known malware signatures
+        run: |
+          echo "Checking changed files for known malware signatures..."
+          FAILED=0
+
+          SIGNATURES=(
+            "A8-261"
+            "rmcej%otb%"
+            "Cot%3t=shtP"
+            "global\['r'\]=require"
+            "global\['m'\]=module"
+            ":443/0x/ls"
+            ":443/0x/cl"
+            "0xa322E5f3"
+            "TMfKQEd7TJJa5xNZJZ2Lep838vrzrs7mAP"
+            "q4FZkxX"
+            "x-payload-"
+            "trongrid\.io"
+            "260120\.vercel\.app"
+            "vscode-settings-bootstrap"
+            "vscode-bootstrapper"
+            "global\.i=\"A8"
+          )
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            for sig in "${SIGNATURES[@]}"; do
+              if grep -qE "$sig" "$file" 2>/dev/null; then
+                echo "::error file=$file::Known malware signature found: $sig"
+                FAILED=1
+              fi
+            done
+          done < /tmp/changed_files.txt
+
+          [ "$FAILED" = "1" ] && exit 1 || echo "OK: No malware signatures found in changed files."
+
+      - name: Check for fake font files
+        run: |
+          echo "Checking changed font files for JS payloads..."
+          FAILED=0
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            echo "$file" | grep -qE "\.woff2$" || continue
+
+            magic=$(xxd -p -l 4 "$file" 2>/dev/null || true)
+            if [ "$magic" != "774f4632" ]; then
+              if grep -qE "require|eval|fetch|child_process" "$file" 2>/dev/null; then
+                echo "::error file=$file::Fake woff2 file - contains JS payload (magic=$magic)"
+                FAILED=1
+              fi
+            fi
+          done < /tmp/changed_files.txt
+
+          [ "$FAILED" = "1" ] && exit 1 || echo "OK: All changed font files are valid."
+
+      - name: Check tasks.json for folderOpen triggers
+        run: |
+          echo "Checking changed tasks.json for malicious folderOpen..."
+          FAILED=0
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            echo "$file" | grep -q "tasks.json" || continue
+
+            if grep -q "folderOpen" "$file" 2>/dev/null; then
+              if grep -qE "woff2|woff|ttf|fonts/" "$file" 2>/dev/null; then
+                echo "::error file=$file::Malicious folderOpen task - executes font file"
+                FAILED=1
+              else
+                echo "::warning file=$file::tasks.json has folderOpen trigger - review manually"
+              fi
+            fi
+          done < /tmp/changed_files.txt
+
+          [ "$FAILED" = "1" ] && exit 1 || echo "OK: No malicious folderOpen tasks in changed files."
+
+      - name: Check for malicious filenames
+        run: |
+          echo "Checking for known malicious filenames in changed files..."
+          FAILED=0
+
+          MALICIOUS_NAMES=(
+            "fa-solid-400.woff2"
+            "temp_auto_push.bat"
+            "temp_interactive_push.bat"
+            "branch_structure.json"
+            "tmp7A863DD1.tmp"
+            "_credentials.json"
+            "_sysenv.json"
+            "_sysenv.env"
+            "_info.json"
+          )
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            filename=$(basename "$file")
+            for name in "${MALICIOUS_NAMES[@]}"; do
+              if [ "$filename" = "$name" ]; then
+                echo "::error file=$file::Known malicious filename detected: $filename"
+                FAILED=1
+              fi
+            done
+          done < /tmp/changed_files.txt
+
+          [ "$FAILED" = "1" ] && exit 1 || echo "OK: No malicious filenames found in changed files."
+
+      - name: Check .gitignore for malware entries
+        run: |
+          echo "Checking changed .gitignore files for malware entries..."
+          FAILED=0
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            echo "$file" | grep -q ".gitignore" || continue
+
+            if grep -qE "temp_auto_push|temp_interactive_push|branch_structure" "$file" 2>/dev/null; then
+              echo "::error file=$file::Malware entries found in .gitignore"
+              grep -nE "temp_auto_push|temp_interactive_push|branch_structure" "$file"
+              FAILED=1
+            fi
+          done < /tmp/changed_files.txt
+
+          [ "$FAILED" = "1" ] && exit 1 || echo "OK: No malware entries in changed .gitignore files."
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "### PolinRider Security Scan Passed ✅" >> $GITHUB_STEP_SUMMARY
+          echo "All security checks passed. No malicious patterns detected in changed files." >> $GITHUB_STEP_SUMMARY
+
+      - name: Summary on failure
+        if: failure()
+        run: |
+          echo "### PolinRider Security Scan Failed ❌" >> $GITHUB_STEP_SUMMARY
+          echo "Malicious patterns detected in this PR. Review the errors above and do not merge until resolved." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Do not open flagged files in VS Code or Cursor.**" >> $GITHUB_STEP_SUMMARY
+          echo "**Rotate credentials from a clean device if you ran this code locally.**" >> $GITHUB_STEP_SUMMARY
