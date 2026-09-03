@@ -78,6 +78,8 @@ jobs:
 
           while IFS= read -r file; do
             [ -f "$file" ] || continue
+            # Skip documentation and workflow files that legitimately contain these strings
+            echo "$file" | grep -qE "README|LICENSE|\.md$|\.yml$|\.yaml$|\.txt$" && continue
             for sig in "${SIGNATURES[@]}"; do
               if grep -qE "$sig" "$file" 2>/dev/null; then
                 echo "::error file=$file::Known malware signature found: $sig"
