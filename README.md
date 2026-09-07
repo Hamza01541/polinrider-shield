@@ -7,6 +7,17 @@ A Windows and macOS security tool for the **PolinRider/Lazarus Group npm supply 
 
 ---
 
+## Downloads
+
+| Platform | File |
+|---|---|
+| 🪟 Windows | [windows-polinrider-sheild.bat](https://raw.githubusercontent.com/Hamza01541/polinrider-shield/master/windows/windows-polinrider-sheild.bat) |
+| 🍎 macOS | [mac-polinrider-scanner.sh](https://raw.githubusercontent.com/Hamza01541/polinrider-shield/master/Mac/mac-polinrider-scanner.sh) |
+
+> Right-click a link and choose "Save link as..." (or use `curl -O <link>`) to download the script directly.
+
+---
+
 ## What is PolinRider?
 
 PolinRider is a supply chain attack campaign attributed to the **DPRK Lazarus Group / BlueNoroff**. As of August 2026 it has compromised over 2,000 GitHub repositories across multiple unique owners, with numbers growing rapidly since its first detection in early 2026.
@@ -34,15 +45,15 @@ PolinRider is a supply chain attack campaign attributed to the **DPRK Lazarus Gr
 
 | File | Platform | Scan | Lockdown |
 |---|---|---|---|
-| `windows/file-scanner.bat` | Windows | ✅ | ✅ Automatic |
-| `mac/check-polinrider-mac.sh` | macOS | ✅ | ❌ Manual steps required |
+| [`windows/windows-polinrider-sheild.bat`](https://raw.githubusercontent.com/Hamza01541/polinrider-shield/master/windows/windows-polinrider-sheild.bat) | Windows | ✅ | ✅ Automatic |
+| [`Mac/mac-polinrider-scanner.sh`](https://raw.githubusercontent.com/Hamza01541/polinrider-shield/master/Mac/mac-polinrider-scanner.sh) | macOS | ✅ | ❌ Manual steps required |
 | `.github/workflows/security-scan.yml` | GitHub Actions | ✅ | ❌ |
 
 > **macOS users:** The Mac script is a read-only forensic scanner and does not change any settings. After running the scan, apply the lockdown steps manually - see the [Mac Manual Lockdown](#mac-manual-lockdown) section below.
 
 ---
 
-## Windows (`file-scanner.bat`)
+## Windows (`windows-polinrider-sheild.bat`)
 
 ### Requirements
 - Windows 10 or 11
@@ -50,7 +61,7 @@ PolinRider is a supply chain attack campaign attributed to the **DPRK Lazarus Gr
 - Run as Administrator for full protection
 
 ### How to run
-1. Download `windows/file-scanner.bat`
+1. Download [`windows/windows-polinrider-sheild.bat`](https://raw.githubusercontent.com/Hamza01541/polinrider-shield/master/windows/windows-polinrider-sheild.bat)
 2. Right-click the file
 3. Select **Run as administrator**
 4. Press any key to start
@@ -89,7 +100,7 @@ set GIT_HISTORY=3 months ago
 
 ---
 
-## macOS (`check-polinrider-mac.sh`)
+## macOS (`mac-polinrider-scanner.sh`)
 
 ### Requirements
 - macOS
@@ -97,15 +108,17 @@ set GIT_HISTORY=3 months ago
 - git
 
 ### How to run
+1. Download [`Mac/mac-polinrider-scanner.sh`](https://raw.githubusercontent.com/Hamza01541/polinrider-shield/master/Mac/mac-polinrider-scanner.sh)
+
 ```bash
 # Quick scan
-bash mac/check-polinrider-mac.sh
+bash Mac/mac-polinrider-scanner.sh
 
 # Deep scan including full git history
-DEEP_GIT=1 bash mac/check-polinrider-mac.sh
+DEEP_GIT=1 bash Mac/mac-polinrider-scanner.sh
 
 # Scan specific folders
-bash mac/check-polinrider-mac.sh ~/work ~/repos
+bash Mac/mac-polinrider-scanner.sh ~/work ~/repos
 ```
 
 > This script is **read-only** and changes nothing on your machine.
